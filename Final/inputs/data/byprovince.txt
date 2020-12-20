@@ -1,0 +1,19 @@
+2016 Census Profiles Files / Profile of Provinces
+COL2 - Province name
+COL3 - Population and dwelling counts / Population, 2016
+COL4 - Age & Sex - Both sexes / Total - Age groups and average age of the population - 100% data ; Both sexes / 15 to 64 years ; Both sexes
+COL5 - Age & Sex - Both sexes / Total - Age groups and average age of the population - 100% data ; Both sexes / 65 years and over ; Both sexes
+COL10 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / Under $10,000 (including loss)
+COL11 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $10,000 to $19,999
+COL12 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $20,000 to $29,999
+COL13 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $30,000 to $39,999
+COL14 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $40,000 to $49,999
+COL15 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $50,000 to $59,999
+COL16 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $60,000 to $69,999
+COL17 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $70,000 to $79,999
+COL18 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $80,000 to $89,999
+COL19 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $90,000 to $99,999
+COL20 - Income - Total Sex / Total - Total income groups in 2015 for the population aged 15 years and over in private households - 100% data / Percentage with total income / $100,000 and over
+COL21 - Education - Total Sex / Total - Highest certificate, diploma or degree for the population aged 15 years and over in private households - 25% sample data / Secondary (high) school diploma or equivalency certificate
+COL22 - Education - Total Sex / Total - Highest certificate, diploma or degree for the population aged 15 years and over in private households - 25% sample data / No certificate, diploma or degree
+COL23 - Education - Total Sex / Total - Highest certificate, diploma or degree for the population aged 15 years and over in private households - 25% sample data / Postsecondary certificate, diploma or degree
