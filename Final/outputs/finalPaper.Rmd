@@ -1,0 +1,572 @@
+---
+title: "Increased Voter Turnout Would Change the Result of 2019 Canadian Federal Election"
+subtitle: "Election Prediction with the Multilevel Logistic Regression with Post-Stratification (MRP) Framework"
+author: "Guangyu Du"
+thanks: "Code are available at: https://github.com/spicapica/stats/tree/main/Final"
+date: "December 18th, 2020"
+abstract: |
+  |  About 66% of Canadian electors voted for the 2019 Canadian Federal Election, and this election was considered as a very difficult one to predict in terms of the competition between the Liberals and the Conservatives. Particularly, the Liberal Party of Canada which led by the Prime Minister Just Trudeau won the most seats by a narrow margin and formed a minority government, but lost the popular vote to the Conservative Party of Canada. In this work, the multilevel (logistic) regression with post-stratification (MRP) framework was trained firstly with the Canadian Election Survey 2019 data, then the prediction with post-stratification was made by the trained model with 2016 Canadian Census Profile data which is a simulated representative dataset of the whole Canadian population. This study demonstrated that, if all eligible Canadians had voted in this federal election, the Liberals would win the popular vote. 
+  |
+  | **Keywords:** Multilevel Regression with Post-Stratification (MRP); Liberal Party of Canada; 2019 Canadian Federal Election; Voter Turnout;  Representative Sample; Prediction;
+output:
+  pdf_document: 
+    latex_engine: lualatex
+header_includes: 
+   - \usepackage{amsmath} 
+   - \usepackage{dcolumn}
+toc: FALSE
+bibliography: references8.bib
+---
+
+
+```{r setup, include=FALSE, cache = FALSE}
+# knitr settings
+require("knitr")
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE)
+opts_chunk$set(engine = "R")
+knitr::opts_chunk$set(echo = T)
+knitr::opts_chunk$set(message = F)
+knitr::opts_chunk$set(warning = F)
+## setting wd in DELL
+# opts_knit$set(root.dir = "~/Documents/")
+                                                 
+## cache = F, if cache = T, will not revaluate code chunk everytime
+## double or more space to insert a line break
+```
+
+
+```{r libs, echo = FALSE, warning= F}
+######################
+## Set up workspace
+######################
+# rm(list = ls())
+# load required packages
+require(stargazer)
+require(gridExtra)
+require(broom)
+
+require(tidyverse)
+require(captioner)
+
+require(arsenal)
+require(magrittr)
+require(gtable)
+require(RColorBrewer)
+# require(forcats)
+
+options(stringsAsFactors = F)
+options(dplyr.width = Inf)
+# getwd()
+
+```
+
+
+
+# Introduction
+
+The competition of the Liberals and the Conservatives during 2019 Canadian federal election was very intense. Even though Justin Trudeau barely won the most seats to form the minority government eventually, a lot of pre-campaign period and campaign period national polls provided results of voting intention against him. Nowadays, it is still very interesting to figure out why Justin Trudeau could beat the worst expectation against him and won again as the Prime Minister. What’s more, since the campaign period national polls had very conflicting results at that time, it is crucial to figure out why political polls results were quite different from each other and how to improve further polling method based upon this. One possible answer to these two questions is the non-representative sampling datasets issue, which means the sample used in those polls might not be a good representative of the whole Canadian population who are eligible to vote, even the electors who voted in the 2019 election might not be inclusive enough [@Forecasting; @DeepMRP]. The latter one is the issue related with the voter turnout, which is the measurement of civic participation in election. The election results might be significantly altered if the voter turnout were increased [@Fiveturnout]. In almost every election in democracy world, many citizen fail to participate in voting, and those who vote are systematically unrepresentative of the eligible population [@Fiveturnout]. Low and unequal turnout is a serious problem because election results fail to reflect the opinions of the citizenry [@Fiveturnout]. Low turnout pose a serious challenge to the accuracy of election opinion polls as well. 
+
+Although the standard solution is to use the representative polls and the ideal scenario for election is that the people who voted have similar political attitudes with non-voters. Several challenges are presented: the cost of representative polls has becoming enormous, the response rate keeps decreasing in the past several decades and the characteristics of voters could be different from non-voters such as there might be differences in age and gender distributions. Fortunately, a practical approach to generate unbiased results from non-representative sampling dataset is to use the multilevel regression with post-stratification (MRP) framework [@DeepMRP]. It has been demonstrated that the MRP framework was able to generate accurate forecast compared to the results generated from the representative polls, correcting the known biases between sample and the target population [@Forecasting]. What’s more, the MRP model can generate vote choice by subgroups defined by multiple demographic and geographic characteristics [@DeepMRP; @Forecasting].
+
+In this work, the MRP framework was applied to revisit and simulate the results of 2019 Canadian Federal Election: Firstly, the multilevel logistic regression model was trained using the `glm` function in `R`, the response variable, voting_intention, was dichotomized to focus on the Liberals vs the Conservatives; Secondly, the vote intention of general Canadian population was generated by making prediction with the trained multilevel logistic regression model using Canadian census data. At the first stage, AIC (Akaike information criterion) was used in the backward model selection. Since the AIC taking both of the log likelihood and the number of estimated parameter into account, it is widely used in model selection to find the most parsimonious model, where the model achieves the desired level of fit with the least number of variables. 
+
+The results demonstrated that increased voter turnout would change the result of the 2019 Canadian Federal Election, where the Liberals would win the popular votes by 2.2% against the Conservatives, instead of losing the popular votes by 0.9%. 
+
+```{r load_data, echo = FALSE, warning = FALSE, message = FALSE}
+# load data and combine to df to make figure
+survey_data <- read_csv("survey.csv")
+census_data <- read_csv("census.csv")
+
+
+```
+
+# Methods
+
+## Data
+
+### Data Description
+
+To set up the MRP tool, two datasets were used in this study, where the first dataset is usually the non-representative survey data with the voting intention variable to build the multilevel logistic regression model and the second dataset is the representative census dataset to represent the general population of all eligible Canadians. Both of the datasets were used with permission.
+
+Particularly, the first dataset was obtained via a R package, `cesR` [@cesR]. This package provides access to multiple election opinion polls, from which the dataset generated by the 2019 Canadian Election Study was used in this work [@ces2019a; @ces2019b]. This is a online sampling study which composed of a two-wave panel, including the campaign period and post-election stages. The campaign period survey, which contains 37822 respondents with 620 variables, was used in this study. And this pre-election survey started from September 13th to the day of election October 21st, 2019. All enrolled respondents needed to be aged 18 or over, and Canadian citizens or permanent residents. Thus, the targeted population of this survey was the set of all Canadian citizens and permanent residents, aged 18 or older. The online sampling was conducted through a commercial survey software Qualtrics. The sampling unit of this survey is an eligible Canadian individual, and the targets of this survey were stratified by region and balanced on gender and age within each region [@ces2019a; @ces2019b]. The sampling frame was a list of panels on Qualtrics, which are identifiable by the panel ID. To improve the quality of the data, marginal values were successively weighted according to province, as well as gender, age group and education level [@ces2019a; @ces2019b]. The survey data was preprocessed by filtering out ineligible observations by age and citizenship, and all N/A and meaningless values were removed. 
+
+The second dataset was the census profile from 2016 Canadian national census, which is the Census Program providing a statistical portrait of Canada every five years. This is the most updated census data, and it is assumed in this study that the general Canadian population remained the same in 2019 compared to the population in 2016. The overall response rate was 98.4% at the country level, which consists of responses from three different types of collection, including the Internet, Self-response and the Long form. That is to say, in 2016, Canadian households had many options to participate in the census, including responding online, completing and mailing back a paper questionnaire, contacting the Census Help Line or through telephone or in-person follow-up. The sampling frame of the census was a enumerated list of 15.4 million dwellings in Canada. For all occupied dwelling, the corresponding households should complete the census questionnaire. The sampling unit was a Canadian individual person, which means the observation was at the individual level and the entire population of Canada was enumerated as well. In the 2016 Census, there were roughly 46000 collection units in Canada to make the census collection more efficient. A collection unit is a small geographic unit. The wave methodology was applied to increase the coverage of the Census Program, which involves contacting non-respondent households at key times to remind them to participate in the census and persuade them to complete the questionnaire. Because the Canadian household is required by law to complete the census questionnaire, the wave methodology was designed to encourage people to participate earlier online. The census contains different types of sampling methods. For instance, about 25% of the long-form sample universe were received the long-form questionnaire to collect demographic and socioeconomic information of the Canadian population. In details, The population of the long-form sampling was the private households type of the entire Canadian household. With the sampling frame as a list of private households, the stratified systematic sampling design was used to select 25% of the population. In this study, the 2016 Census Profile data was retrieved [@census2016]. The individual level observational dataset was simulated using random sampling with proportions calculated by 2016 census profile data.  
+
+Finally, the variables and subgroups within each variable from the above two datasets must be matched with each other. Thus, variables including age, gender, province of the person, education level, income level and unemployment rate were selected from both datasets. Particularly, in terms of the survey data, there were 12549 observations in the final dataset after data preprocessing; in terms of the census data, 1666941 observations were simulated after the removal of observations aged under 15, because the age of 15 in 2016 is the age of 18 in 2019. What’ more, the census data was divided into age groups of 15 – 64 and 65 over, and the education, income and employment variables were only available for the age group of 15 – 64. In terms of the vote choice, the Conservatives was chosen as the reference level. 
+
+
+
+```{r tablesNumber, include=FALSE}
+# figure settings
+fontSize <- 12
+color_set <- "Set2"
+# # numbering of tables with captions 
+table_nums <- captioner::captioner(prefix = "Table.")
+# Table captions
+tab.1_cap <- table_nums(name = "tab_1",  caption = "Characteristics: Survey Data")
+tab.2_cap <- table_nums(name = "tab_2", caption = "Characteristics: Census Data")
+
+# results 
+tab.3_cap <- table_nums(name = "tab_3", caption = "Multilevel Logistic Regression Models")
+# results 
+tab.4_cap <- table_nums(name = "tab_4", caption = "Prediction Result: MRP Framework")
+```
+
+
+
+
+```{r orderData, include=FALSE}
+# make sure all variables are categorical 
+# survey data
+survey_data <- survey_data %>% mutate(Vote = factor(Vote),
+                                      Age = factor(Age),
+                                      Income = factor(Income),
+                                      Gender = factor(Gender),
+                                      Province = factor(Province),
+                                      Education = factor(Education),
+                                      Employment = factor(Employment),
+                                      Label = factor(Label))
+
+
+# census data
+census_data <- census_data %>% mutate(
+                                      Age = factor(Age),
+                                      Income = factor(Income),
+                                      Gender = factor(Gender),
+                                      Province = factor(Province),
+                                      Education = factor(Education),
+                                      Employment = factor(Employment),
+                                      Label = factor(Label))
+
+# Match datasets
+sum(survey_data$Province %>% levels() != census_data$Province %>% levels())
+
+# need reorder
+census_data$Education %>% levels()
+census_data$Income %>% levels()
+census_data$Employment %>% levels()
+
+# Relevel Education                 
+survey_data$Education <- factor(survey_data$Education, levels(survey_data$Education)[c(3, 1:2)])
+# Relevel Education 
+census_data$Education <- factor(census_data$Education, levels(census_data$Education)[c(3, 1:2)])
+# relevel employment 
+census_data$Employment <- factor(census_data$Employment, levels(census_data$Employment)[c(2, 1)])
+survey_data$Employment <- factor(survey_data$Employment, levels(survey_data$Employment)[c(2, 1)])
+
+# relevel income 
+survey_data$Income <- factor(survey_data$Income, levels(survey_data$Income)[c(2:4, 1)])
+# Relevel Education 
+census_data$Income <- factor(census_data$Income, levels(census_data$Income)[c(2:4, 1)])
+
+# make sure all matched 
+sum(census_data$Education %>% levels() != survey_data$Education %>% levels() )
+sum(census_data$Income %>% levels() != survey_data$Income %>% levels() )
+sum(census_data$Employment %>% levels() != survey_data$Employment %>% levels() )
+sum(census_data$Age %>% levels() != survey_data$Age %>% levels() )
+sum(census_data$Gender %>% levels() != survey_data$Gender %>% levels() )
+
+
+# finally combine
+df <- rbind(survey_data[, 2:ncol(survey_data)], census_data[, 2:ncol(census_data)])
+
+```
+
+
+
+### Data Exploration
+
+The characteristics summary of these two datasets were demonstrated with Table 1 and Table 2. As shown in Table 1, 12549 observations were included in the survey dataset and 50.9% of them would like to vote for the Liberals, while the other 49.1% would like to vote for the conservatives. In both datasets, the age variable was dichotomized. According to the balanced design of the survey sampling, the gender distribution in the survey data is more balanced than the gender distribution of the 2016 census data, which was demonstrated in the Figure 1 as well. Moreover, the greater differences between the survey data and the census data were found in the `Education`, `Provinces` and `Income`. 
+
+
+
+`r table_nums('tab_1')`
+
+```{r table1, fig.cap=tab.1_cap, echo = FALSE}
+# Characteristics summary table
+my_labels <- list(
+  Vote = "Vote Choice",
+  Age = "Age",
+  Gender = "Gender",
+  Province = "Provinces and Territories",
+  Education = "Education",
+  Employment = "Employment Status",
+  Income = "Income"
+)
+
+# generate table by the list of variables 
+table1 <- tableby(~Vote + Age + Gender + Province + Education + Employment + Income, 
+                  data = survey_data)
+                  summary(table1, labelTranslations = my_labels) %>% kable()
+
+```
+
+
+`r table_nums('tab_2')`
+
+```{r table2, fig.cap=tab.2_cap, echo = FALSE}
+# Characteristics summary table
+my_labels <- list(
+  Age = "Age",
+  Gender = "Gender",
+  Province = "Provinces and Territories",
+  Education = "Education",
+  Employment = "Employment Status",
+  Income = "Income"
+)
+
+# generate table by the list of variables 
+table1 <- tableby(~Age + Gender + Province + Education + Employment + Income, 
+                  data = census_data)
+                  summary(table1, labelTranslations = my_labels) %>% kable()
+
+```
+
+
+
+```{r compareplot1, echo = FALSE, message = FALSE, fig.cap="Comparison of Socio-demographics from Two Datasets",  fig.height = 9, fig.width = 7}
+# compare age groups of two datasets 
+fontSize <- 12
+color_set <- "Set2"
+p1 <- df  %>%  
+     count(Age, Label) %>% 
+     group_by(Label) %>% 
+    mutate(freq = n/sum(n)) %>%
+    ggplot(aes(x = Age, y = freq, fill = Label)) +
+      geom_bar(stat="identity", width = 0.5, position = "dodge" ) +
+   labs(y = "Relative Frequencies", title = "Age Groups") +
+  # scale_y_continuous(labels=scales::percent) +
+   scale_fill_brewer( palette = color_set) +
+  theme_bw() +
+theme(axis.text.x = element_text(size = fontSize -2, colour = "black"),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      plot.title = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="bottom")
+
+p2 <- df  %>%  
+     count(Gender, Label) %>% 
+     group_by(Label) %>% 
+    mutate(freq = n/sum(n)) %>%
+    ggplot(aes(x = Gender, y = freq, fill = Label)) +
+      geom_bar(stat="identity", width = 0.5, position = "dodge" ) +
+   labs(y = "Relative Frequencies", title = "Gender Groups") +
+  # scale_y_continuous(labels=scales::percent) +
+   scale_fill_brewer( palette = color_set) +
+  theme_bw() +
+theme(axis.text.x = element_text(size = fontSize -2, colour = "black"),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      plot.title = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="bottom")
+
+p3 <- df  %>%  
+     count(Education, Label) %>% 
+     group_by(Label) %>% 
+    mutate(freq = n/sum(n)) %>%
+    ggplot(aes(x = Education, y = freq, fill = Label)) +
+      geom_bar(stat="identity", width = 0.5, position = "dodge" ) +
+   labs(y = "Relative Frequencies", title = "Education Groups") +
+   scale_fill_brewer( palette = color_set) +
+  theme_bw() +
+theme(axis.text.x = element_text(size = fontSize -2, colour = "black", angle = 30, vjust = 0.5),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      plot.title = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="bottom")
+
+p4 <- df  %>%  
+     count(Employment, Label) %>% 
+     group_by(Label) %>% 
+    mutate(freq = n/sum(n)) %>%
+    ggplot(aes(x = Employment, y = freq, fill = Label)) +
+      geom_bar(stat="identity", width = 0.5, position = "dodge" ) +
+   labs(y = "Relative Frequencies", title = "Employment Groups") +
+
+   scale_fill_brewer( palette = color_set) +
+  theme_bw() +
+
+theme(axis.text.x = element_text(size = fontSize -2, colour = "black"),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      plot.title = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="bottom")
+
+grid.arrange(p1, p2, p3, p4, nrow = 2, ncol = 2)
+
+```
+
+
+In general, the respondents from the poll were more educated compared to the general Canadian, with proportions of post high school level were 71.1% and 45.4%, respectively, and proportions of under high school level were 3.8% and 18.3%, respectively. The `Income` recorded in the survey was the household level income, while the `Income` recorded in the census was the individual level income. This may explain the differences in `Income` between the survey data and the census data. The differences in the `Province` were more robust and profound. In the survey data, there were 14.3% in Alberta, 41.2% in Ontario and 17.9% in Quebec, while there were 11.2% in Alberta, 38.3% in Ontario and 23.3% in Quebec of the Canadian population. The differences in the socio-demographics between these two datasets were demonstrated in the Figure 1 as well. 
+
+The voting intention collected in the survey data were demonstrated in the Figure 2 at the provinces and territories level. The Conservatives dominate the Alberta, have a narrow lead in British Columbia, while the Liberals have a steady lead in Ontario and Quebec. These four provinces have the top four most seats in the Parliament. Thus, the vote choices in these four provinces are most important. 
+
+
+
+```{r survey, fig.cap="2019 Election Opinion Poll by Province",  fig.height = 8, fig.width = 7,message = FALSE,echo = FALSE, warning=FALSE}
+#COmpare the percentage of people from each state voting for each of two parties.
+fontSize <- 12
+p1 <- survey_data %>%
+           group_by(Province, Vote) %>% summarize(n = n()) %>%
+            mutate(pct = n/sum(n),  lbls = scales::percent(pct)) %>% 
+    ggplot(
+       aes(x = Province, y = pct, fill = Vote )) +
+  coord_flip() +
+  geom_bar(stat = "identity", position = "fill" ) +
+           # , width = 1.5 ) +
+  scale_y_continuous(breaks = seq(0, 1, .2), label = scales::percent) +
+  geom_text(aes(label = lbls),  size = 3,  position = position_stack(vjust = 0.5), color = "black") +
+  scale_fill_brewer( palette = color_set) +
+  labs(y = "Relative Frequency", x = "Provinces", fill = "2019 Election Poll: cesR")+
+  theme_minimal() +
+  # axis.text.x = element_text(size = fontSize -2, colour = "black") angle 
+ theme(axis.text.x = element_text(size = fontSize -2, colour = "black"),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="bottom")
+
+p1
+```
+
+
+
+## Model
+
+The MRP tool was developed to derive election forecasts in greater socioeconomic, geographic and demographic detail, what’s more, MRP framework is able to generate precise vote choice estimates at different levels and types of subgroups and yield accurate election forecasts using non-representative dataset compared to predictive model based on traditional representative polls [@DeepMRP]. 
+
+In this study, the dependent variable vote was dichotomized as “Liberal Party” and “Conservative Party”. Therefore, to set up MRP, a multilevel logistic regression was fit with categorical variables.  With those categorical variables, the population can be partitioned into cells, which is also called as subgroups, and each cell has its corresponding socioeconomic, geographic and demographic meaning. In details, categorical variables such as province and territory location of the voter gender, age groups (age), (province), education levels (education),  income level (income) and unemployment rate (employment) were chosen as variables of interest. The dependent variable was `Vote`. Those variables were chosen based on the previous political election forecast papers and the availability of the retrieved census data set [@Forecasting; @multiDistrict; @census2016]. 
+
+The backward model selection procedure was started with the complete model, and the goal was to identify the best model with the least number of variables and smallest AIC. The difference in AIC greater than two is considered as significant evidence of a better model. Models with similar AIC were selected based on the number of variables. And the complete model was shown here: 
+
+\begin{equation}
+Vote \sim Bernoulli(\frac{1}{1 + exp(-(Intercept + b_{i}x_{i} ))}) 
+\end{equation}
+where $x_{i}$ and $b_{i}$ represent the variables and corresponding coefficients set of age, gender, education, province, income and employment. 
+
+With the model selection procedure, the reduced models were fitted and the final model was chosen as:
+\begin{equation}
+Vote \sim Bernoulli(\frac{1}{1 + exp(-(Intercept + b_{j}x_{j} ))}) 
+\end{equation}
+where $x_{j}$ and $b_{j}$ represent the variables and corresponding coefficients set of gender, education, income and province.
+
+
+All multilevel logistic regression model were fitted with `glm` function in R [@R-base]. Equation (1) represents the full model, and Equation (2) represents the final model, which did not include employment status and age groups.   
+
+
+
+```{r fitglm, include=FALSE}
+# names(survey_data)
+# # survey_data$stateid %>% levels()
+# check and compare all models with each time one variable less
+# # glm, logistic regression with sex age 
+############## First using all variables ###############
+# Using all variables available 
+Full <- glm(Vote ~ Age + Gender + Province + Education + Employment + Income,
+               data = survey_data, family = "binomial")
+broom::tidy(Full)
+summary(Full)
+############ Age ################
+No_Age <- glm(Vote ~  Gender + Province + Education + Employment + Income,
+               data = survey_data, family = "binomial")
+broom::tidy(No_Age )
+summary(No_Age)
+############ Employment ################
+No_Employment <- glm(Vote ~ Age + Gender + Province + Education + Income,
+               data = survey_data, family = "binomial")
+broom::tidy(No_Employment )
+summary(No_Employment)
+############ Education  ################
+No_Age_Employ  <- glm(Vote ~ Gender + Province  + Income + Education,
+               data = survey_data, family = "binomial")
+broom::tidy(No_Age_Employ )
+summary(No_Age_Employ )
+
+
+```
+
+
+With the trained model, the post-stratification was carried out with the simulated census data. In other words, post-stratification is to make estimate by averaging over groups in proportion to their size in the population. Through post-stratification, the trained model is able to mimic the prediction as a representative poll. Therefore, the differences between the non-representative dataset and the target population were corrected. Eventually, the probability of voting for the Liberals were predicted at the individual level and aggregated at different subgroup levels or the population level. 
+
+All work were done in `R` (version 4.0.2) [@R-base] and `Rstudio` (version 1.3.1093). `Tidyverse` (version 1.3.0), `ggplot2` and `R-base` were used for data wrangling and visualization [@Tidyverse; @R-base]. R package `forcats` (version 0.5.0) was also used during the data pre-processing stage [@Forcats]. There are other packages also used such as `captioner`, `gridExtra`, `broom`, `magrittr`, `gtable`, `stargazer`, `RColorBrewer`, `knitr`, `labelled` and `arsenal` [@Captioner; @Stargazer; @Arsenal; @Knitr; @gridExtra; @Broom; @magrittr; @Labelled; @RCB]. Code are available at: https://github.com/spicapica/stats/tree/main/Final. 
+
+
+
+
+
+
+
+# Results
+
+The multilevel logistic regression models fit in this study were summarized in Table 3. The backward model selection was started from the full model (1), then reduced models were compared based on AIC and number of variables. Since coefficients of the binary age variable and the binary employment status variable were not significant in the full model, the reduced models were fit by leaving those variables out. Eventually, the most reduced model (4) was chosen as final model with the smallest AIC and least number of variables, including gender, education, income and province, as shown in Table 3. All these models were trained with the survey data. 
+
+`r table_nums('tab_3')`
+
+```{r table3, fig.cap=tab.3_cap, echo = FALSE, results='asis'}
+# fit all lms 
+# summary table 
+# summary table of lm regression results 
+stargazer(Full, No_Age, No_Employment, No_Age_Employ,
+          omit = c("Province", "Constant"),
+          covariate.labels = c("Age65-", "GenderWoman", "EducationHigh School",
+                               "EducationPost High School", "EmploymentEmployed",
+                               "Income30000-69999", "Income70000-99999",
+                               "Income100000-") ,
+          type='latex', header=FALSE,
+          omit.stat = c("ser", "f") ,
+          column.labels = c("Full Model", "No Age", "No Employment", "Neither"),
+          notes = "Province was included but not shown."
+          )
+
+```
+
+
+
+```{r predict, echo=FALSE, include= FALSE, fig.cap="2019 Election Opinion Poll by Province",  fig.height = 8, fig.width = 7 }
+############# make prediction ###############
+# log odds of estimate
+census_data$rawestimate <-    No_Age_Employ %>%   predict(newdata = census_data)
+# 
+# # transform to probability 
+census_data$Estimate <- as.numeric(exp(census_data$rawestimate)/(1+exp(census_data$rawestimate)))
+# 
+census_data %<>% drop_na()
+# probability == 0.5 
+sum(census_data$Estimate == 0.5)
+# conservative cutoff
+census_data$Vote <- ifelse(census_data$Estimate > 0.5, "Liberal Party", "Conservative Party")
+```
+
+
+
+`r table_nums('tab_4')`
+
+```{r table4, fig.cap=tab.4_cap, echo = FALSE, results='asis'}
+########### final results #########
+my_labels <- list(
+  Estimate = "Vote: MRP Prediction",
+  Vote = "Vote Choice"
+)
+
+
+table1 <- tableby(~Estimate + Vote, data = census_data)
+                  summary(table1, labelTranslations = my_labels) %>%
+                  kable()
+                  
+######### real ############
+realp2016 <-  round(0.3947/(0.3947 + 0.3189), 4)
+realp2019 <-  round(0.3312/(0.3312 + 0.3434), 4)
+    
+```
+
+
+With the final multilevel logistic regression found in the first step of MRP, the post-stratification estimate of vote choice was made with the simulated census data. The result was aggregated at the country level, as shown in Table 4. Particularly, the group average probability of voting for the Liberals was 0.522, with standard deviation of 0.159. Compared to the vote choice of the initial survey data, which is 50.9% of the Liberal Party, the prediction made by the trained model with the general Canadian population was more in favor of the Liberal Party. If the probability was dichotomized with conservative probability 0.5, where greater than 0.5 means voting for the Liberals, the vote would be even more in favor of the Liberals. The result demonstrated that if all eligible Canadians had voted, the Liberal Party of Canada could win the popular votes by a narrow margin. 
+
+Additionally, the vote choice estimates were also averaged over subgroups by education or income levels. As shown in Figure 3, using 0.5 as the threshold, people with relatively low education and more wealth tend to vote for the conservatives, while the others would like to vote for the Liberals. 
+
+
+```{r resultIncome, fig.cap="Votes Prediction by Socioeconomic Groups",  fig.height = 5.5, fig.width = 7.5 ,message = FALSE,echo = FALSE, warning=FALSE}
+
+p1 <-  ggplot( data = census_data,
+       aes(x = Education, y = Estimate, fill = Education )) +
+  geom_boxplot() +
+  geom_hline(yintercept =  0.5, color = "black") +
+  scale_fill_brewer( palette = color_set) +
+  labs(y = "Voteting Probability: the Liberals")+
+  theme_bw() +
+  # axis.text.x = element_text(size = fontSize -2, colour = "black") angle 
+ theme(axis.text.x = element_text(size = fontSize -2, colour = "black"),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="none")
+
+p2 <-  ggplot( data = census_data,
+       aes(x = Income, y = Estimate, fill = Income )) +
+  geom_boxplot() +
+  geom_hline(yintercept =  0.5, color = "black") +
+  scale_fill_brewer( palette = color_set) +
+  labs(y = "Voteting Probability: the Liberals")+
+  theme_bw() +
+  # axis.text.x = element_text(size = fontSize -2, colour = "black") angle 
+ theme(axis.text.x = element_text(size = fontSize -2, colour = "black", angle = 30 , vjust = 0.5),
+      axis.text.y = element_text(size = fontSize - 2, colour = "black"),
+      axis.title.x = element_text(size = fontSize),
+      axis.title.y = element_text(size = fontSize),
+      legend.text = element_text(size= fontSize - 2),
+      legend.title = element_text(size= fontSize),
+      legend.position="none")
+
+grid.arrange(p1, p2, nrow = 1)
+
+```
+
+# Discussion 
+
+
+A simple multilevel logistic regression model was chosen as the final model in this study, with only four categorical variables, gender, education, income and province. However, the results generated from this simple model was generally comparable to most election opinion polls in 2019 and the final 2019 Canadian election results. Even though, the competition between the Liberals and the Conservatives was very close and intense in 2019. The results of this study suggested that the Liberals might have won more popular votes, if all eligible Canadians had voted. Particularly, the Liberals might have won 52.2% of all popular votes when compared to the Conservatives. In general, the population average probability of voting for the Liberals predicted by this study lies between the popular votes of 2016, `r realp2016` and the popular votes of 2019 `r realp2019`, which is a reasonable prediction, because it has been well established that the Liberals had slowly lost support since 2016.
+
+
+Through this work, the vote choices were estimated for small subgroups which were defined by categorical variables including gender, province, education and income levels. The correlation between the vote preferences and those variables were well documented [@Forecasting; @multiDistrict]. Incorporating correct and meaningful features in the model made the forecast precise and robust. The detailed information of all models fitted can be found in the **Appendix**.  
+
+The voter turnout of the 2019 Canadian federal election was around 66% - 67%, and the voter turnout decreased gradually for the past several federal elections. Low and unequal voter turnout has been described as “democracy’s unresolved dilemma”, which is a serious challenge to the democracy [@Fiveturnout]. It has been shown that the results from voluntary turnout are significantly different from the results of everyone turns out to vote, because the preferences of marginal voters are often different from those of regular voters [@Fiveturnout]. Thus the people who voted in 2019 was not a good representation of the entire eligible Canadian population. The biases between the voters and the eligible Canadian population can partially explain the disagreement between vote prediction from this study and real result of 2019. Moreover, this disagreement further proved that changes in voter turnout can alter the election results significantly. Therefore, it is very important to conduct a study to explore and demonstrate the potential election results under the condition that all Canadian citizens had voted in 2019. 
+
+
+The MRP framework is a well developed statistical tool to make vote choice estimates in the context of political topics. Multilevel modeling allows the information and estimates be partially pooled over common characteristics across different subgroups, and the post-stratification with the representative dataset corrects the biases in the election opinion polls. Additionally, the multilevel regression model can provide accurate and robust subgroup-level estimates, while avoiding those issues caused by taking empirical means.
+
+All statistical modeling has two frames: the small world of the model itself and the large world we hope to deploy the model in [@rethinking]. One of the benefits provided by MRP is that, it has the potential to derive unbiased estimates of the targeted population based on highly biased survey data, by the introduction of the post-stratification dataset. Typically, the post-stratification dataset such as the census data is a general purpose data and not restricted by certain research topic. Thus, the post-stratification data is always available and the same dataset can be applied to studies focused on different topics of the same population. By using the census data and the MRP framework, this study have the unique power to represent the Canadian citizenry, as voter turnout level of 100%, which usually can not be achieved by opinion polls.  
+
+
+Limitations of this study were mainly introduced by the lack of a proper and matched census dataset, since the MRP requires two matched datasets and datasets are expected to be riched in socioeconomic, geographic and demographic features. It is usually very difficult to find two exactly matched datasets. Moreover, the representative dataset of the targeted popultion may not exist. In addition, the MRP requires a very good representative dataset of the population, such as the census data, to maximize the prediction power of this tool.
+
+In terms of this work, there was no census data of the general Canadian population in 2019. Therefore, in this work, it was assumed that the 2016 population is the same as the 2019 population, which may not be the case. This would reduce the power of this study as well. In terms of the mismatch, the gender variable in the survey dataset has three levels, including man, woman and the others, while the census data only treated it as a binary feature. To match the datasets, this study had to use a binary gender. However, a binary gender variable is a biased way in representing the population, since the diversity in gender is an important aspect of the population [@kennedy2020using]. Similarly, the age group was dichotomized in this work, because the age was grouped as 15-64 and 65- in the 2016 census data. This definitely leads to the loss of power in the variable. Thus the final model did not include age. Another mismatch is the income variable, while the household level income was collected in the survey data, the individual income was collected in the census data. 
+
+Another potential limitation of the MRP model is that only categorical variables such as socio-economic, demographic, and geographic features are suitable to build subgroups. Some important variables such as the satisfaction of the current economy was not included. These types of variables are typically not available in census data. 
+
+In the future work, a separated model can be developed to include variables mentioned in the Keys model, which contains continuous variables [@theKeys]. An popular idea is that the accuracy of the prediction can be improved through stacking different models together, where each model is in charge of different aspects of information, such as different sets of uncorrelated variables. Additionally, the MRP framework itself is able to take multiple survey data with different weights in the model building stage [@DeepMRP]. As approaching the election day, the polls are more accurate compared to early polls. Thus, in the future work, multiple opinion polls should be included. 
+
+Many limitations of this study can be fixed if the individual level census data is available, such as the age would be categorized into at least five subgroups instead of only two subgroups. With the simulated dataset, it is not appropriate to use complex hierarchical logistic regression, while incorporating deeper interactions between variables. If a real census data was adopted in this study, subgroup level vote choice estimates, such as at province level, would definitely be more accurate and robust. Moreover, the simulated dataset does not have enough detailed subgroup information, such as the geographic location at the riding level. There are 338 ridings spread in the Canada, each one of the ten provinces has multiple ridings, and each one of the three territories is a riding itself. Each riding will decide a seat in the House of Commons. The party with the most seats in the House of Commons will win the election and form the government. Thus, without the riding level vote choice estimation, this study was limited in the resolution of the results. Particularly, this study is only able to make prediction of the popular votes but not able to predict which party can win the election. In addition, the Canadian federal election has more than two parties and the scenario was simplified in this work, which can be improved in the future.
+
+
+\newpage
+
+# Appendix {-}
+
+```{r models, echo=FALSE}
+
+broom::tidy(Full)
+
+############ Age ################
+broom::tidy(No_Age )
+
+############ Employment ################
+broom::tidy(No_Employment )
+
+############ no age employment ################
+broom::tidy(No_Age_Employ )
+
+```
+
+
+\newpage
+
+
+# References
+
+
