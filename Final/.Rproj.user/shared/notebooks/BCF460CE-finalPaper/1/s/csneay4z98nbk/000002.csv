@@ -1,0 +1,5 @@
+"0","# load data and combine to df to make figure"
+"0","survey_data <- read_csv(""survey.csv"")"
+"0","census_data <- read_csv(""census.csv"")"
+"0",""
+"0",""
